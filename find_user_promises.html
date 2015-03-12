@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title></title>
+        <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+        <script src="http://cdn.bootcss.com/q.js/1.0.1/q.js"></script>
+
+    </head>
+    <body>
+        <h1> Check your console output! </h1>
+    </body>
+    <script>
+
+//---------------------------------------- Network
+function jsonp(url, data) {
+    var deferred = Q.defer();
+    
+    $.ajax({
+        url: url
+        , dataType: "jsonp"
+        , data: data || null
+    }).done(function(res) {
+        deferred.resolve(res);
+    });
+    
+    return deferred.promise;
+}
+
+function gjsonp(endpoint, data) {
+    var genome = "https://genome.klick.com:443/api/";
+    return jsonp(genome+endpoint, data || null);
+}
+
+
+//---------------------------------------- Search functions
+
+function getUserByName(name) {
+    return gjsonp("User", { ForAutocompleter: true
+                            , Keyword: name
+                            , IsNotAPerson: false
+                          }).then(searchHandler);
+}
+
+function getUserByEmail(email) {
+    return gjsonp("User", { ForAutocompleter: false
+                            , email: email
+                            , IsNotAPerson: false
+                          }).then(searchHandler);
+}
+
+
+function getPMUserByProjectID(projectID) {
+    return gjsonp("Project/{ProjectID}", { ProjectID: parseInt(projectID)
+                                           , WithInfo: true
+                                         }).then(searchHandler);
+}
+
+function searchHandler(data) {
+    var entries = data.Entries[0];
+    if (! entries) { return null; }
+    return ( entries.Info ? entries.Info.PMUserFullName : entries.Name );
+};
+
+//---------------------------------------- Main function
+
+function getUserOrPm(name, email, projectID) {
+    var deferred = Q.defer();
+
+    var allGetPromises = [ getUserByName(name)
+                           , getUserByEmail(email)
+                           , getPMUserByProjectID(projectID) ];
+    
+    Q.all(allGetPromises)
+        .spread(function(nameUser, eMailUser, pmUser) {
+            console.log("User by Name: "+nameUser);
+            console.log("User by EMail: "+eMailUser);
+            console.log("Fallback PM: "+pmUser);
+
+            var resultUser = ( eMailUser || nameUser || pmUser || null );
+
+            deferred.resolve(resultUser);
+        });
+
+    
+
+    return deferred.promise;
+}
+
+getUserOrPm("Gerlach", "acareiro@klick.com", 17887).then(function(user) {
+    console.log("You should contact: "+user);
+});
+
+</script>
+    </html>

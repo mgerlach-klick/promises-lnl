@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title></title>
+        <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.2/underscore-min.js"></script>
+        <script src="http://cdn.bootcss.com/q.js/1.0.1/q.js"></script>
+
+    </head>
+    <body>
+	<h1> Check your console output! </h1>
+    </body>
+
+    <script>
+
+     //---------------------------------------- Network
+     
+     function jsonp(url, data) {
+         var deferred = Q.defer();
+         
+         $.ajax({ url: url
+                , dataType: "jsonp"
+                , data: data || null
+         }).done(function(res) {
+             deferred.resolve(res);
+         });
+         
+         return deferred.promise;
+     }
+
+     function gjsonp(endpoint, data) {
+         var genome = "https://genome.klick.com:443/api/";
+         return jsonp(genome+endpoint, data || null);
+     }
+
+
+     //---------------------------------------- Main functions
+
+     function getLastKudos(userid) {
+         return gjsonp("Chatter/UserStats", { UserID: userid})
+		.then(function(data) {
+		    return data.KudosSinceLastReview;
+		});
+     }
+
+     function getChatterPostDetails(chatterid) {
+	 return gjsonp("Chatter/"+chatterid)
+		.then(function(data) {
+		    return data.Entries ? data.Entries[0] : null;
+		});
+     }
+
+     function prettyPrintKudos(kudos) {
+	 console.log("--------------------");
+	 console.log("From: " + kudos.CreatedByFirstNameAndInitial);
+	 console.log("> " + kudos.Content);
+	 console.log("Likes: " + kudos.NumLikes);
+     }
+
+     function countAllLikes(kudosArray) {
+	 return _.reduce(kudosArray, function(accumulator, value) {
+	     return accumulator + value.NumLikes;
+	 }, 0);
+     }
+
+     //---------------------------------------- Main
+
+     getLastKudos(4966).then( function(kudos) {
+	 
+	 var kudosDetails = _.map( kudos, function(kudos) {
+	     return getChatterPostDetails(kudos.ChatterID);
+	 });
+	 
+	 Q.all(kudosDetails).then( function (kudosArray) {
+	     _.each(kudosArray, function(kudos) { prettyPrintKudos(kudos); });
+	 });
+
+	 Q.all(kudosDetails).then( function (kudosArray) {
+	     var totalLikes = countAllLikes(kudosArray);
+	     console.log("====================");
+	     console.log("TOTAL NO OF LIKES: "+totalLikes);
+	 });
+     });
+
+
+
+    </script>
+</html>
