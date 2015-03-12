@@ -1,0 +1,101 @@
+    <!doctype html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8"/>
+    <title></title>
+    <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+
+</head>
+<body>
+    <h1> Check your console output! </h1>
+    </body>
+    <script>
+
+//---------------------------------------- Network
+function jsonp(url, data, callback) {
+    $.ajax({
+        url: url,
+        dataType: "jsonp",
+        data: data || null
+    }).done(function(res) {
+        callback(res);
+    });
+}
+
+function gjsonp(endpoint, data, callback) {
+    var genome = "https://genome.klick.com:443/api/";
+    jsonp(genome+endpoint, data || null, callback);
+}
+
+
+//---------------------------------------- Search functions
+
+function getUserByName(name, cb) {
+    gjsonp("User", {ForAutocompleter: true,
+                    Keyword: name,
+                    IsNotAPerson: false
+                   }, function(res) {
+                       var user = searchHandler(res);
+                       cb(user);
+                   }); 
+}
+
+function getUserByEmail(email, cb) {
+    gjsonp("User", {ForAutocompleter: false,
+                    email: email,
+                    IsNotAPerson: false
+                   }, function(res) {
+                       var user = searchHandler(res);
+                       cb(user);
+                   });
+}
+
+
+function getPMUserByProjectID(projectID, cb) {
+    gjsonp("Project/{ProjectID}", {ProjectID: parseInt(projectID),
+                                   WithInfo: true
+                                  }, function(res) {
+                                      var user = searchHandler(res);
+                                      cb(user);
+                                  });
+}
+
+function searchHandler(data) {
+    var entries = data.Entries[0];
+    if (! entries) { return null; }
+    return ( entries.Info ? entries.Info.PMUserFullName : entries.Name );
+};
+
+//---------------------------------------- Main function
+
+function getUserOrPm(name, email, projectID, cb) {
+ 
+    var nameUser, eMailUser, pmUser;
+    getUserByName(name, function(user){
+        console.log("User by Name: "+user);
+        nameUser = user;
+        
+        getUserByEmail(email, function(user){
+            console.log("User by email: "+user);
+            eMailUser = user;
+            
+            getPMUserByProjectID(projectID, function(user){
+                console.log("Fallback PM: "+user);
+                pmUser = user;
+                
+                var resultUser = ( eMailUser || nameUser || pmUser || null );
+                cb(resultUser);
+            });
+            
+        });
+    });
+}
+
+
+getUserOrPm("Max Gerlach", "acarreiro@klick.com", 17887, function(user) {
+    console.log("You should contact: "+user);
+});
+
+
+    </script>
+    </html>

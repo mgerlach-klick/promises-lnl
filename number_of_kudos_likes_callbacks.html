@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title></title>
+        <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.2/underscore-min.js"></script>
+        <script src="http://cdn.bootcss.com/q.js/1.0.1/q.js"></script>
+
+    </head>
+    <body>
+        <h1> Check your console output! </h1>
+    </body>
+
+    <script>
+
+     //---------------------------------------- Network
+
+     function jsonp(url, data, callback) {
+         $.ajax({
+             url: url,
+             dataType: "jsonp",
+             data: data || null
+         }).done(function(res) {
+             callback(res);
+         });
+     }
+
+     function gjsonp(endpoint, data, callback) {
+         var genome = "https://genome.klick.com:443/api/";
+         jsonp(genome+endpoint, data || null, callback);
+     }
+
+
+
+     //---------------------------------------- Main functions
+
+     function getLastKudos(userid, cb) {
+         gjsonp("Chatter/UserStats", { UserID: userid},
+	        function(data) {
+	            cb(data.KudosSinceLastReview);
+	        });
+     }
+
+     function getChatterPostDetails(chatterid, cb) {
+         gjsonp("Chatter/"+chatterid, {},
+	        function(data) {
+	            cb(data.Entries ? data.Entries[0] : null);
+	        });
+     }
+
+     function prettyPrintKudos(kudos) {
+         console.log("--------------------");
+         console.log("From: " + kudos.CreatedByFirstNameAndInitial);
+         console.log("> " + kudos.Content);
+         console.log("Likes: " + kudos.NumLikes);
+     }
+
+
+
+     //---------------------------------------- Main
+
+     var totalLikes = 0;
+     var numberOfKudos = 0;
+
+     getLastKudos(4966, function(kudos) {
+         numberOfKudos = kudos.length;
+         var totalLikesCounter = totalLikesCallback(numberOfKudos);
+         
+         _.each( kudos, function(kudos) {
+    	     getChatterPostDetails(kudos.ChatterID, function(chatterPost) {
+                 prettyPrintKudos(chatterPost); 
+                 totalLikes += chatterPost.NumLikes;
+                 totalLikesCounter();
+             });
+
+         });
+     });
+
+     function totalLikesCallback(counter) {
+         var kudosCounter = counter;
+         return function() {
+             if( --kudosCounter == 0) {
+                 console.log("====================");
+                 console.log("TOTAL NO OF LIKES: "+totalLikes);
+             }
+         }
+     }
+
+
+
+    </script>
+</html>
